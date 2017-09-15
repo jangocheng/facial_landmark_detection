@@ -33,7 +33,10 @@ def train():
         MOVING_AVERAGE_DECAY, global_step)
     variable_averages_op = variable_averages.apply(tf.trainable_variables())
 
-    rmse = tf.sqrt(tf.reduce_mean(tf.square(y_ - y)))
+    rmse = tf.sqrt(tf.reduce_mean(tf.square(y - y_)))
+    total_error = tf.reduce_sum(tf.square(y - tf.reduce_mean(y)))
+    unexplained_error = tf.reduce_sum(tf.square(y - y_))
+    r_squared = 1 - tf.divide(unexplained_error, total_error)
 
     train_step = tf.train.AdamOptimizer(
         LEARNING_RATE).minimize(rmse, global_step=global_step)
@@ -46,12 +49,12 @@ def train():
         data = datasets.kaggle_data(TRAIN_FILE)
         for i in range(TRAINING_STEPS):
             xs, ys = data.next_batch(BATCH_SIZE)
-            _, rmse_value, step = sess.run(
-                [train_op, rmse, global_step], feed_dict={x: xs, y_: ys})
+            _, rmse_value, r2_score, step = sess.run(
+                [train_op, rmse, r_squared, global_step], feed_dict={x: xs, y_: ys})
 
             if i % 100 == 0:
-                print('After {:d} training step(s), rmse on training batch is {:.6f}.'.format(
-                    step, rmse_value))
+                print('After {:d} training step(s), rmse is {:.6f}, r_squared is {:.6f}.'.format(
+                    step, rmse_value, r2_score))
 
 
 if __name__ == '__main__':
