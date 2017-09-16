@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 class DataSet(object):
@@ -61,7 +62,7 @@ class DataSet(object):
             return self._images[start:end], self._targets[start:end]
 
 
-def kaggle_data(filename, valid_percentage):
+def kaggle_data(filename, valid_percentage=0.3):
     df = pd.read_csv(filename)
     cols = df.columns[:-1]
 
@@ -89,6 +90,20 @@ def kaggle_data(filename, valid_percentage):
     # images = np.concatenate((images, extended_images), axis=0)
     # landmarks = np.concatenate((landmarks, extended_landmarks), axis=0)
 
+    # perm = np.arange(images.shape[0])
+    # np.random.shuffle(perm)
+    # images = images[perm]
+    # landmarks = landmarks[perm]
+
     valid_size = int(images.shape[0] * valid_percentage)
 
-    return {'train': DataSet(images[valid_size:], landmarks[valid_size:]), 'valid': DataSet(images[:valid_size], landmarks[:valid_size])}
+    return {'train': DataSet(images[valid_size:], landmarks[valid_size:]),
+            'valid': DataSet(images[:valid_size], landmarks[:valid_size])}
+
+
+def show_kaggle(image, landmark):
+    image = image.reshape((96, 96))
+    landmark = landmark.reshape((15, 2)) * 96
+    plt.imshow(image)
+    plt.scatter(landmark[:, 0], landmark[:, 1], c='r')
+    plt.show()
