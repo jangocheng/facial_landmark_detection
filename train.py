@@ -46,15 +46,19 @@ def train():
 
     with tf.Session() as sess:
         tf.global_variables_initializer().run()
-        data = datasets.kaggle_data(TRAIN_FILE)
+        data = datasets.kaggle_data(TRAIN_FILE, 0.3)
+        train_data = data['train']
+        valid_data = data['valid']
         for i in range(TRAINING_STEPS):
-            xs, ys = data.next_batch(BATCH_SIZE)
+            xs, ys = train_data.next_batch(BATCH_SIZE)
             _, rmse_value, r2_score, step = sess.run(
                 [train_op, rmse, r_squared, global_step], feed_dict={x: xs, y_: ys})
 
             if i % 100 == 0:
-                print('After {:d} training step(s), rmse is {:.6f}, r_squared is {:.6f}.'.format(
-                    step, rmse_value, r2_score))
+                rmse_valid, r2_valid = sess.run([rmse, r_squared], feed_dict={
+                                                x: valid_data.images, y_: valid_data.targets})
+                print('Step {:d}: rmse(train): {:.6f}, r_squared(train): {:.6f}, rmse(valid):{:.6f},r_squared(valid):{:.6f}'.format(
+                    step, rmse_value, r2_score, rmse_valid, r2_valid))
 
 
 if __name__ == '__main__':

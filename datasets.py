@@ -61,7 +61,7 @@ class DataSet(object):
             return self._images[start:end], self._targets[start:end]
 
 
-def kaggle_data(filename, test=False):
+def kaggle_data(filename, valid_percentage):
     df = pd.read_csv(filename)
     cols = df.columns[:-1]
 
@@ -73,9 +73,22 @@ def kaggle_data(filename, test=False):
     images = np.vstack(df.Image)
     images = images.reshape((-1, 96, 96, 1))
 
-    if test:
-        landmarks = None
-    else:
-        landmarks = df[cols].values / 96
+    landmarks = df[cols].values / 96
 
-    return DataSet(images, landmarks)
+    # extended_images = []
+    # extended_landmarks = []
+
+    # for i in range(images.shape[0]):
+    #     extended_images.append(np.fliplr(images[i]))
+    #     extended_landmarks.append(
+    #         [1 - landmarks[i][j] if j % 2 == 0 else landmarks[i][j] for j in range(30)])
+
+    # extended_images = np.array(extended_images)
+    # extended_landmarks = np.array(extended_landmarks)
+
+    # images = np.concatenate((images, extended_images), axis=0)
+    # landmarks = np.concatenate((landmarks, extended_landmarks), axis=0)
+
+    valid_size = int(images.shape[0] * valid_percentage)
+
+    return {'train': DataSet(images[valid_size:], landmarks[valid_size:]), 'valid': DataSet(images[:valid_size], landmarks[:valid_size])}
