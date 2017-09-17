@@ -38,16 +38,16 @@ def variable_summaries(var, name):
 def conv_layer(input_tensor, input_channels, filter_length, filter_width, filter_depth, layer_name):
     with tf.name_scope(layer_name):
         with tf.name_scope('weights'):
-            conv_weights = get_weights(
+            weights = get_weights(
                 [filter_length, filter_width, input_channels, filter_depth])
-            variable_summaries(conv_weights, layer_name + '/weights')
+            variable_summaries(weights, layer_name + '/weights')
         with tf.name_scope('biases'):
-            conv_biases = get_biases([filter_depth])
-            variable_summaries(conv_biases, layer_name + '/biases')
+            biases = get_biases([filter_depth])
+            variable_summaries(biases, layer_name + '/biases')
         with tf.name_scope('convolution'):
-            conv = tf.nn.conv2d(input_tensor, conv_weights, strides=[
+            conv = tf.nn.conv2d(input_tensor, weights, strides=[
                                 1, 1, 1, 1], padding='SAME')
-            relu = tf.nn.relu(tf.nn.bias_add(conv, conv_biases))
+            relu = tf.nn.relu(tf.nn.bias_add(conv, biases))
             tf.summary.histogram(layer_name + '/convolution', relu)
         return relu
 
@@ -95,12 +95,14 @@ def inference(input_tensor, train):
     reshaped = tf.reshape(pool3, [-1, nodes])
 
     fc1 = fc_layer(reshaped, nodes, FC1_SIZE, 'layer7-fc1')
-    if train:
-        fc1 = tf.nn.dropout(fc1, 0.5)
+    # if train:
+    #     fc1 = tf.nn.dropout(fc1, 0.5)
+    fc1 = tf.cond(train, lambda: tf.nn.dropout(fc1, 0.5), lambda: fc1)
 
     fc2 = fc_layer(fc1, FC1_SIZE, FC2_SIZE, 'layer8-fc2')
-    if train:
-        fc2 = tf.nn.dropout(fc2, 0.5)
+    # if train:
+    #     fc2 = tf.nn.dropout(fc2, 0.5)
+    fc2 = tf.cond(train, lambda: tf.nn.dropout(fc2, 0.5), lambda: fc2)
 
     fc3 = fc_layer(fc2, FC2_SIZE, NUM_LANDMARKS *
                    2, 'layer9-fc3', act=tf.identity)

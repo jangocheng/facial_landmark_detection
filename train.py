@@ -15,7 +15,7 @@ MOVING_AVERAGE_DECAY = 0.99
 TRAINING_STEPS = 2000
 
 
-def train():
+def train(data):
     with tf.name_scope('input'):
         x = tf.placeholder(
             tf.float32,
@@ -27,8 +27,9 @@ def train():
             [None, inference.NUM_LANDMARKS * 2],
             name='y-input'
         )
+        op = tf.placeholder(tf.bool)
 
-    y = inference.inference(x, True)
+    y = inference.inference(x, op)
     global_step = tf.Variable(0, trainable=False)
 
     variable_averages = tf.train.ExponentialMovingAverage(
@@ -51,27 +52,31 @@ def train():
 
     merged = tf.summary.merge_all()
     # saver = tf.train.Saver()
+    train_summary_writer = tf.summary.FileWriter(
+        SUMMARY_PATH + '/train', tf.get_default_graph())
+    valid_summary_writer = tf.summary.FileWriter(SUMMARY_PATH + '/valid')
+
+    def feed_dict(train):
+        if train:
+            xs, ys = data['train'].next_batch(BATCH_SIZE)
+            return {x: xs, y_: ys, op: True}
+        else:
+            images = data['valid'].images
+            targets = data['valid'].targets
+            return {x: images, y_: targets, op: False}
 
     with tf.Session() as sess:
-        train_summary_writer = tf.summary.FileWriter(
-            SUMMARY_PATH + '/train', sess.graph)
-        valid_summary_writer = tf.summary.FileWriter(
-            SUMMARY_PATH + '/valid', sess.graph)
         tf.global_variables_initializer().run()
-        data = datasets.kaggle_data(TRAIN_FILE, 0.3)
-        train_data = data['train']
-        valid_data = data['valid']
         for i in range(TRAINING_STEPS):
-            xs, ys = train_data.next_batch(BATCH_SIZE)
             # _, rmse_value, r2_score, step = sess.run(
             #     [train_op, rmse, r_square, global_step], feed_dict={x: xs, y_: ys})
             summary, _ = sess.run([merged, train_op],
-                                  feed_dict={x: xs, y_: ys})
+                                  feed_dict=feed_dict(train=True))
             train_summary_writer.add_summary(summary, i)
 
             if i % 10 == 0:
-                summary = sess.run(merged, feed_dict={
-                                   x: valid_data.images, y_: valid_data.targets})
+                summary, r2_score = sess.run(
+                    [merged, r_square], feed_dict=feed_dict(train=False))
                 valid_summary_writer.add_summary(summary, i)
         train_summary_writer.close()
         valid_summary_writer.close()
@@ -84,4 +89,5 @@ def train():
 
 
 if __name__ == '__main__':
-    train()
+    data = datasets.kaggle_data(TRAIN_FILE, 0.3)
+    train(data)
